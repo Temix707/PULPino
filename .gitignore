@@ -1,0 +1,114 @@
+LAB_2_BUS/ARM_AMBA3_APB.pdf
+
+LAB_3_Makefile/students_server_tools
+#LAB_3_Makefile/lab3 (2).pdf
+LAB_3_Makefile/Подключение_к_серверу (2).pdf
+Terminal1_9_b/
+
+LAB_4_Programming/lab4.pdf
+
+Coursework/pulpino_students_temp_hex/.vscode
+Coursework/pulpino_students_temp_hex/ip
+Coursework/pulpino_students_temp_hex/pulpino_nexys_a7_100t
+
+Coursework/pulpino_students_hex_uart/.vscode
+Coursework/pulpino_students_hex_uart/ip
+Coursework/pulpino_students_hex_uart/pulpino_nexys_a7_100t
+
+
+
+
+
+#############################
+
+## log files
+*.log
+*.jou
+*.rpt
+*.vdi
+*.xpr/
+*.xpr
+
+## bitstream
+*.bit
+*.bin
+*.mcs
+*.svf
+*.imagegit
+
+## netlist
+*.edf
+*.edif
+*.vn
+*.vm
+
+## SDF
+*.sdf
+
+## sim dump
+*.vcd
+*.saif
+*.tcf
+*.wdb
+
+## others
+unisims
+
+## C-files
+*.elf
+*.a
+*.sa
+*.so
+*.lib
+
+## dirs
+vivado.cache/
+vivado.hw/
+vivado.ip_user_files/
+vivado.runs/
+vivado.sim/
+
+###### for Xilinx Vivado|ISE
+.Xil/
+.cache/
+fsm_encoding.os
+tab_*/
+webtalk.*
+vivado_pid*.str
+hs_err_pid*
+xelab.*
+xsim.*
+xvlog.*
+*.cache
+*.sim
+*.runs
+*.hw
+*.hw/
+*.backup.*
+*.debug
+
+*.ip_user_files/
+*.runs/
+*.sim/
+
+## checkpoint files
+*.dcp
+
+*.pb
+
+*.js
+*.map
+*.json
+*.ts
+*.html
+
+# OSX
+#
+.DS_Store
+
+# Visual Studio Code
+.vscode
+
+# node.js
+#
+node_modules/

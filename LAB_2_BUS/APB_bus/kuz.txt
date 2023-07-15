@@ -1,0 +1,170 @@
+module cipher(
+  input                 clk_i,      // Clock signal
+                        resetn_i,   // Synchronous reset signal with active LOW level
+                      
+                        request_i,  // The signal of the request to start encryption
+                        ack_i,      // Confirmation signal for receiving encrypted data
+                            
+                [127:0] data_i,     // Encrypted data ( Which will begin its encryption campaign )
+
+  output   reg          busy_o,     // A signal indicating that reception is impossible
+                                    // the next encryption request, because
+                                    // module in the process of encrypting the previous request
+                                    
+           reg          valid_o,    // Signal of readiness of encrypted data ( termination )
+           reg  [127:0] data_o      // Encrypted data
+);
+
+reg [127:0] key_mem [0:9];
+
+reg [7:0] S_box_mem [0:255];
+
+reg [7:0] L_mul_16_mem  [0:255];
+reg [7:0] L_mul_32_mem  [0:255];
+reg [7:0] L_mul_133_mem [0:255];
+reg [7:0] L_mul_148_mem [0:255];
+reg [7:0] L_mul_192_mem [0:255];
+reg [7:0] L_mul_194_mem [0:255];
+reg [7:0] L_mul_251_mem [0:255];
+
+parameter [2:0] Idle = 3'b000;
+parameter [2:0] Key_phase = 3'b001;
+parameter [2:0] S_phase = 3'b010;
+parameter [2:0] L_phase = 3'b011;
+parameter [2:0] Finish = 3'b100;
+
+reg [2:0] State = Idle;
+
+reg [127:0] Encode_Data = 128'b0;
+reg [15:0] L_phase_temp = 16'b0;
+reg [3:0] Key_phase_counter = 4'b0;
+reg [4:0] L_phase_counter = 5'b0;
+
+initial begin
+    $readmemh("keys.mem",key_mem );
+    $readmemh("S_box.mem",S_box_mem );
+
+    $readmemh("L_16.mem", L_mul_16_mem );
+    $readmemh("L_32.mem", L_mul_32_mem );
+    $readmemh("L_133.mem",L_mul_133_mem);
+    $readmemh("L_148.mem",L_mul_148_mem);
+    $readmemh("L_192.mem",L_mul_192_mem);
+    $readmemh("L_194.mem",L_mul_194_mem);
+    $readmemh("L_251.mem",L_mul_251_mem);
+end
+
+
+
+always @(posedge clk_i)
+begin
+    if ( !resetn_i )
+        begin
+            State <= Idle;
+            Encode_Data <= 128'b0;
+            Key_phase_counter <= 4'b0;
+            L_phase_counter <= 5'b0;
+            busy_o <= 1'b0;
+            valid_o <= 1'b0;
+            data_o <= 128'b0;
+        end
+    case(State)
+        Idle: begin
+            valid_o <= 1'b0;
+            if( request_i )
+            begin
+                Encode_Data <= data_i;
+                State <= Key_phase;
+                busy_o <= 1'b1;
+            end
+        end
+        Key_phase: begin
+//            $display("ROUND: %h", Key_phase_counter + 1);
+//            $display("Current key: %h", key_mem[Key_phase_counter]);
+//            $display("Round started. Data: %h", Encode_Data);
+            Encode_Data <= Encode_Data ^ key_mem[Key_phase_counter];
+//            $display("Key phase. Data: %h", Encode_Data);
+            Key_phase_counter <= Key_phase_counter + 1'b1;
+            if(Key_phase_counter == 4'b1001)
+            begin
+                State <= Finish;
+            end
+            else begin
+                State <= S_phase;
+            end
+        end
+        S_phase: begin
+            State <= L_phase;
+            for (int i=0; i < 16; i++)
+                Encode_Data[((i+1)*8)-1 -: 8] <= S_box_mem[Encode_Data[((i+1)*8)-1 -: 8]];
+            //Encode_Data <= {S_box_mem[Encode_Data[ 127:120 ]], 
+               //             S_box_mem[Encode_Data[ 119:112 ]],
+                 //           S_box_mem[Encode_Data[ 111:104 ]],
+                   //         S_box_mem[Encode_Data[ 103:96  ]],
+                     //       S_box_mem[Encode_Data[ 95:88   ]],
+                       //     S_box_mem[Encode_Data[ 87:80   ]],
+                         //   S_box_mem[Encode_Data[ 79:72   ]],
+             //               S_box_mem[Encode_Data[ 71:64   ]],
+               //             S_box_mem[Encode_Data[ 63:56   ]],
+                 //           S_box_mem[Encode_Data[ 55:48   ]],
+                   //         S_box_mem[Encode_Data[ 47:40   ]],
+                     //       S_box_mem[Encode_Data[ 39:32   ]],
+                       //     S_box_mem[Encode_Data[ 31:24   ]],
+                         //   S_box_mem[Encode_Data[ 23:16   ]],
+                          //  S_box_mem[Encode_Data[ 15:8    ]],
+                           // S_box_mem[Encode_Data[ 7:0     ]]};
+//            $display("S Phase finished. Bytes for L phase: ");
+//            $write("%h ", Encode_Data);
+//            $write("\n");
+        end
+        L_phase: begin
+            if( L_phase_counter == 5'b10000 )
+            begin
+                L_phase_counter <= 5'b00000;
+                State <= Key_phase;
+//                $display("Next round is about to start. Data: %h", Encode_Data);
+            end else begin
+                L_phase_temp = L_mul_148_mem[Encode_Data[ 127:120 ]] ^
+                                L_mul_32_mem [Encode_Data[ 119:112 ]] ^
+                                L_mul_133_mem[Encode_Data[ 111:104 ]] ^
+                                L_mul_16_mem [Encode_Data[ 103:96  ]] ^
+                                L_mul_194_mem[Encode_Data[ 95:88   ]] ^
+                                L_mul_192_mem[Encode_Data[ 87:80   ]] ^
+                                              Encode_Data[ 79:72   ]  ^
+                                L_mul_251_mem[Encode_Data[ 71:64   ]] ^
+                                              Encode_Data[ 63:56   ]  ^
+                                L_mul_192_mem[Encode_Data[ 55:48   ]] ^
+                                L_mul_194_mem[Encode_Data[ 47:40   ]] ^
+                                L_mul_16_mem [Encode_Data[ 39:32   ]] ^
+                                L_mul_133_mem[Encode_Data[ 31:24   ]] ^
+                                L_mul_32_mem [Encode_Data[ 23:16   ]] ^
+                                L_mul_148_mem[Encode_Data[ 15:8    ]] ^
+                                              Encode_Data[ 7:0     ];
+                Encode_Data <= {L_phase_temp, Encode_Data[127:8]};
+                L_phase_counter <= L_phase_counter + 1'b1;
+            end
+        end
+        Finish: begin
+            data_o <= Encode_Data;
+            valid_o <= 1'b1;
+            Key_phase_counter <= 7'b0;
+            L_phase_counter <= 5'b0;
+            L_phase_temp <= 16'b0;
+            //Encode_Data <= 128'b0;
+            busy_o <= 1'b0;
+            if( ack_i )
+            begin
+                State <= Idle;
+                valid_o <= 1'b0;
+            end
+            if( request_i )
+            begin
+                State <= Key_phase;
+                Encode_Data <= data_i;
+                busy_o <= 1'b1;
+                valid_o <= 1'b0;
+            end
+        end
+    endcase
+end
+
+endmodule
